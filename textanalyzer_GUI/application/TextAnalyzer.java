@@ -35,6 +35,13 @@ public class TextAnalyzer extends Application{
 
 	}
 	
+	/**
+	 * Sets the stage for a JavaFx GUI.
+	 * The GUI will prompt the user for a file name and a url to be scanned.
+	 * 
+	 * @param primarystage Sets the JavaFx stage 
+	 */
+	
 	@Override
 	public void start(Stage primarystage) {
 		primarystage.setTitle("Poem Text Analyzer");
@@ -48,7 +55,7 @@ public class TextAnalyzer extends Application{
 		
 		button.setOnAction(e -> {
 			try {
-				runTextAnalyzer(filename, URLInput);
+				runTextAnalyzer(filename.getText(), URLInput.getText());
 			} catch (IOException e1) {
 				
 				e1.printStackTrace();
@@ -74,11 +81,17 @@ public class TextAnalyzer extends Application{
 		primarystage.show();
 	}
 	
+	/**
+	 * Returns a file object if the file does not already exist.
+	 * Displays alertbox if file was successfully created or not.
+	 * 
+	 * @param filename  string input from user
+	 * @return  file object created with filename input from user
+	 */
 	
-	
-	public static File createFile(TextField filename) {
+	public File createFile(String filename) {
 		
-		String fileName = filename.getText();
+		String fileName = filename + ".txt";
 		File file = new File(fileName);
 		
 		if(file.exists()) {
@@ -91,13 +104,23 @@ public class TextAnalyzer extends Application{
 		
 		return file;
 	}
+	
+	/**
+	 * Reads a url in string form that is converted into a URL object.
+	 * URL is then scanned by a scanner object.
+	 * 
+	 * @param urlinput  string form of url to be read by scanner
+	 * @return input  a scanner object that scans the url provided by user
+	 * @throws IOException
+	 */
 
-	public static Scanner getURL(TextField urlinput) throws IOException {
+	public Scanner getURL(String urlinput) throws IOException {
 		
-		String URLString = urlinput.getText();
+		String URLString = urlinput;
 		java.net.URL url = null;
 		try {
 			url = new java.net.URL(URLString);
+			
 		} catch (MalformedURLException e) {
 			
 			e.printStackTrace();
@@ -107,34 +130,51 @@ public class TextAnalyzer extends Application{
 		return input;
 	}
 	
-public static ArrayList<String> extractPoem(Scanner input) {
-		
-		Boolean isInChapter = false;
-		ArrayList<String> nextLineArray = new ArrayList<>();
-		ArrayList<String> poemArray = new ArrayList<>();
-		
-		while(input.hasNext()) {
-			nextLineArray.add(input.nextLine());
-		}
-		
-		for(int i = 0; i < nextLineArray.size(); i++) {
-			if(nextLineArray.get(i).contains("<h1>")) {
-				isInChapter = true;
-			}
-			if(nextLineArray.get(i).contains("</div>")) {
-				isInChapter = false;
-			}
-			if(isInChapter) {
-				
-			poemArray.add(nextLineArray.get(i).replaceAll("(<[^>]*>)|([;?!@#$%^&*:.,\"“”’])", " "));
-				
-			}
-		}
-		
-		return poemArray;
-	}
+	/**
+	 * Creates two ArrayLists, one to contain the full contents of the scanned url,
+	 * and another to contain a specific portion of the scanned contents of the url.
+	 * Returns second ArrayList.
+	 * 
+	 * @param input scanner object of url input by user
+	 * @return  ArrayList object that contains a portion of the url content separated by a period.
+	 */
 	
-	public static HashMap<String, Integer> countWords(ArrayList<String> poemArray) {
+	public ArrayList<String> extractPoem(Scanner input) {
+			
+			Boolean isInChapter = false;
+			ArrayList<String> nextLineArray = new ArrayList<>();
+			ArrayList<String> poemArray = new ArrayList<>();
+			
+			while(input.hasNext()) {
+				nextLineArray.add(input.nextLine());
+			}
+			
+			for(int i = 0; i < nextLineArray.size(); i++) {
+				if(nextLineArray.get(i).contains("<h1>")) {
+					isInChapter = true;
+				}
+				if(nextLineArray.get(i).contains("</div>")) {
+					isInChapter = false;
+				}
+				if(isInChapter) {
+					
+				poemArray.add(nextLineArray.get(i).replaceAll("(<[^>]*>)|([;?!@#$%^&*:.,\"“”’])", " "));
+					
+				}
+			}
+			
+			return poemArray;
+		}
+
+	/**
+	 * Returns a HashMap with each word in the passed in ArrayList 
+	 * and the count of each occurrence of each word.
+	 * 
+	 * @param poemArray  ArrayList with part of the contents of the scanned url
+	 * @return  HashMap with each word in the scanned url and its count
+	 */
+	
+	public HashMap<String, Integer> countWords(ArrayList<String> poemArray) {
 		HashMap<String, Integer> wordCount = new HashMap<String, Integer>();
 
 		for(int j = 0; j < poemArray.size(); j++) {
@@ -153,7 +193,15 @@ public static ArrayList<String> extractPoem(Scanner input) {
 		return wordCount;
 	}
 	
-	public static Map<String, Integer> sortHashMap(HashMap<String, Integer> wordCount) {
+	/**
+	 * Creates a sorted HashMap from the one passed in. 
+	 * It sorts the HashMap by value from to greatest to smallest.
+	 * 
+	 * @param wordCount  HashMap with words and it's corresponding count
+	 * @return  sorted HashMap from greatest to smallest
+	 */
+	
+	public Map<String, Integer> sortHashMap(HashMap<String, Integer> wordCount) {
 		Map<String, Integer> sorted = wordCount
 		        .entrySet()
 		        .stream()
@@ -163,9 +211,16 @@ public static ArrayList<String> extractPoem(Scanner input) {
 		return sorted;
 	}
 	
+	/**
+	 * Prints the sorted HashMap contents to a .txt file created from user input.
+	 * 
+	 * @param file  File object created by user
+	 * @param wordCount  sorted HashMap 
+	 * @throws FileNotFoundException
+	 */
 
 
-	public static void printToFile(File file, Map<String, Integer> wordCount) throws FileNotFoundException {
+	public void printToFile(File file, Map<String, Integer> wordCount) throws FileNotFoundException {
 		PrintWriter output = new PrintWriter(file);
 		
 		for(String key: wordCount.keySet()) {
@@ -176,7 +231,16 @@ public static ArrayList<String> extractPoem(Scanner input) {
 		output.close();
 	}
 	
-	public static void runTextAnalyzer(TextField filename, TextField urlinput) throws FileNotFoundException, IOException {
+	/**
+	 * Runs all the methods in the class when called. 
+	 * 
+	 * @param filename  String input from the user to name File object
+	 * @param urlinput  String input from user to point to url to be scanned by Scanner object
+	 * @throws FileNotFoundException
+	 * @throws IOException
+	 */
+	
+	public void runTextAnalyzer(String filename, String urlinput) throws FileNotFoundException, IOException {
 		printToFile(createFile(filename), sortHashMap(countWords(extractPoem(getURL(urlinput)))));
 	}
 
