@@ -6,6 +6,11 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -30,10 +35,37 @@ public class TextAnalyzer extends Application{
 	
 	Button button;
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws Exception {
 		launch(args);
-
+		
 	}
+	
+	/**
+	 * Connection to Database
+	 * @return Connection
+	 * @throws Exception
+	 */
+	
+	public static Connection getConnection() throws Exception {
+		try {
+			String driver = "com.mysql.cj.jdbc.Driver";
+			String url = "jdbc:mysql://localhost:3306/worddb";
+			String username = "root";
+			String password = "Password1!";
+			Class.forName(driver);
+			
+			Connection conn = DriverManager.getConnection(url, username, password);
+			System.out.println("getConnection");
+			
+			return conn;
+			
+		} catch (Exception e) {
+			System.out.println(e);
+		}
+		
+		return null;
+	}
+	
 	
 	/**
 	 * Sets the stage for a JavaFx GUI.
@@ -56,7 +88,7 @@ public class TextAnalyzer extends Application{
 		button.setOnAction(e -> {
 			try {
 				runTextAnalyzer(filename.getText(), URLInput.getText());
-			} catch (IOException e1) {
+			} catch (Exception e1) {
 				
 				e1.printStackTrace();
 			}
@@ -165,6 +197,8 @@ public class TextAnalyzer extends Application{
 			
 			return poemArray;
 		}
+	
+
 
 	/**
 	 * Returns a HashMap with each word in the passed in ArrayList 
@@ -194,25 +228,34 @@ public class TextAnalyzer extends Application{
 	}
 	
 	/**
-	 * Creates a sorted HashMap from the one passed in. 
-	 * It sorts the HashMap by value from to greatest to smallest.
-	 * 
-	 * @param wordCount  HashMap with words and it's corresponding count
-	 * @return  sorted HashMap from greatest to smallest
+	 * Inserts words and their count to database
+	 * @param wordCount
+	 * @throws Exception
 	 */
 	
-	public Map<String, Integer> sortHashMap(HashMap<String, Integer> wordCount) {
-		Map<String, Integer> sorted = wordCount
-		        .entrySet()
-		        .stream()
-		        .sorted(Collections.reverseOrder(Map.Entry.comparingByValue()))
-		        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (e1, e2) -> e2, LinkedHashMap::new));
+	public static void postPoem(Map<String, Integer> wordCount) throws Exception {
 		
-		return sorted;
+		
+		try {
+			Connection con = getConnection();
+			Statement postToDB = con.createStatement();
+			for(String key: wordCount.keySet()) {
+				String sql = "INSERT INTO wordcount (words, count) VALUES ('"+key+"', '"+wordCount.get(key)+"')";
+				postToDB.executeUpdate(sql);
+				
+			}
+		
+				} catch (Exception e) {
+					System.out.println(e);
+				}
+				finally {
+						System.out.println("PostPoem complete");
+				};
+	
 	}
 	
 	/**
-	 * Prints the sorted HashMap contents to a .txt file created from user input.
+	 * Prints the database contents to a .txt file created from user input.
 	 * 
 	 * @param file  File object created by user
 	 * @param wordCount  sorted HashMap 
@@ -220,14 +263,27 @@ public class TextAnalyzer extends Application{
 	 */
 
 
-	public void printToFile(File file, Map<String, Integer> wordCount) throws FileNotFoundException {
+	public void printToFile(File file) throws FileNotFoundException {
 		PrintWriter output = new PrintWriter(file);
 		
-		for(String key: wordCount.keySet()) {
+		try{
+			Connection con = getConnection();
+			String sql = "SELECT words, count FROM wordcount ORDER BY count DESC";
+			Statement stmt = con.createStatement();
+	        ResultSet rs = stmt.executeQuery(sql);
+	        
+	        while(rs.next()) {
+	        	output.print(rs.getString("words") + " " + rs.getInt("count") + "\n");
+	        }
+	       
 			
-			output.print(key + " " + wordCount.get(key) + "\n");
+		}catch (Exception e) {
+			System.out.println(e);
 		}
-		
+		finally {
+			System.out.println("PrintToFile complete");
+	};
+				
 		output.close();
 	}
 	
@@ -236,12 +292,16 @@ public class TextAnalyzer extends Application{
 	 * 
 	 * @param filename  String input from the user to name File object
 	 * @param urlinput  String input from user to point to url to be scanned by Scanner object
-	 * @throws FileNotFoundException
-	 * @throws IOException
+	 * @throws Exception 
 	 */
 	
-	public void runTextAnalyzer(String filename, String urlinput) throws FileNotFoundException, IOException {
-		printToFile(createFile(filename), sortHashMap(countWords(extractPoem(getURL(urlinput)))));
+	public void runTextAnalyzer(String filename, String urlinput) throws Exception {
+		
+//		createTable();
+		postPoem(countWords(extractPoem(getURL(urlinput))));
+		printToFile(createFile(filename));
 	}
+	
 
+	
 }
